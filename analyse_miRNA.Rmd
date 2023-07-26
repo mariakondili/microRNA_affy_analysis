@@ -1,0 +1,73 @@
+---
+title: "analyse_miRNA_expression"
+author: "MariaK"
+date: "25/07/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libs, include=FALSE}
+library(affy)
+library(limma)
+library(stringr)
+suppressPackageStartupMessages(library(tidyverse))
+
+```
+
+```{r,echo=T,eval=F}
+
+library(makecdfenv)
+# downloaded  CDF: https://www.thermofisher.com/fr/fr/home/life-science/microarray-analysis/microarray-data-analysis/genechip-array-library-files.html
+#---> MiRNA 4.0 CDF Library File (zip, 5 MB)
+#---> unzip *.zip -d miRNA_4_0_CDF
+
+make.cdf.package(filename   = "miRNA-4_0-st-v1.cdf",
+                packagename = "miRNA-4_0-st-v1.cdf",
+                cdf.path    = "./miRNA_4_0_CDF/",
+                package.path= "/shared/home/mkondili/Tools_Packages/",
+                compress    = FALSE,
+                species     = "Mus_musculus")
+```
+
+```{r}
+
+raw_dir   <- "/shared/projects/mirna_affy_proj/raw/"
+raw_files <- list.files(path="../raw/")
+cel_files <- raw_files[ which(str_detect( list.files(path="../raw/"),"CEL"))]
+
+```
+
+
+```{r }
+library(mirna40cdf ) #, lib.loc="~/R/x86_64-conda-linux-gnu-library/4.1/",warn.conflicts = FALSE)
+
+setwd(raw_dir)
+Data <- ReadAffy(cdfname="mirna40cdf")
+sampleNames(Data)
+
+```
+
+Robust Multi-Array Average expression measure [RMA]
+
+```{r}
+
+N <- length(Data)
+## Normalise :
+eset.rma <- affy::rma(Data) # ! in log base 2 scale
+
+# Error in get(cdfname, envir = as.environment(paste("package:", cdfname,
+#  object 'cdf' not found
+#! similar error post : https://www.biostars.org/p/349951/
+
+## Get normalised expr.data :
+expr <- exprs(eset.rma)
+
+probeids <- rownames(expr)
+expr <- cbind(probeids, expr)
+
+write_delim( expr, file="Normalised_Expression_All_samples.txt",delim ='\t',quote = F,col_names = T,na = "NA")
+
+```
